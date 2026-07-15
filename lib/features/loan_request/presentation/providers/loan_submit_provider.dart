@@ -46,6 +46,7 @@ class LoanSubmitController extends AsyncNotifier<LoanResult?> {
 
     final request = LoanRequest(
       deviceId: draft.deviceId!,
+      deviceName: draft.deviceName ?? 'Device',
       studentId: draft.studentId!.trim(),
       borrowDate: draft.borrowDate!,
       returnDate: draft.returnDate!,

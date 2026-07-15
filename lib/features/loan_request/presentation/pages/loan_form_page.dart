@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
+import '../../../../app/widgets/app_bottom_nav.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/failures.dart';
 import '../../../equipment/domain/entities/device.dart';
@@ -83,17 +84,16 @@ class _LoanFormPageState extends ConsumerState<LoanFormPage> {
 
     final today = DateTime.now();
     final borrow = draft.borrowDate;
+    final loanDays = (borrow != null && draft.returnDate != null)
+        ? draft.returnDate!.difference(borrow).inDays
+        : null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Request Loan')),
+      appBar: AppBar(title: const Text('Loan Request')),
+      bottomNavigationBar: const AppBottomNav(),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          DepositSummary(
-            deviceName: draft.deviceName ?? widget.device.name,
-            deposit: draft.deposit,
-          ),
-          const SizedBox(height: 20),
           TextField(
             controller: _studentIdController,
             textCapitalization: TextCapitalization.characters,
@@ -139,21 +139,22 @@ class _LoanFormPageState extends ConsumerState<LoanFormPage> {
             ),
             onChanged: ref.read(loanFormProvider.notifier).setPurpose,
           ),
+          const SizedBox(height: 20),
+          RequestSummary(loanDays: loanDays, deposit: draft.deposit),
           const SizedBox(height: 24),
-          FilledButton.icon(
+          FilledButton(
             // Disabled while a submit is in flight — the notifier also guards
             // against re-entry, so rapid taps still yield a single POST.
             onPressed: isSubmitting
                 ? null
                 : () => ref.read(loanSubmitProvider.notifier).submit(),
-            icon: isSubmitting
+            child: isSubmitting
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.send),
-            label: Text(isSubmitting ? 'Submitting…' : 'Submit request'),
+                : const Text('SUBMIT LOAN REQUEST'),
           ),
         ],
       ),

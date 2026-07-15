@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
+import '../../../../app/widgets/app_bottom_nav.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/device.dart';
@@ -36,7 +38,7 @@ class DeviceDetailPage extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(title: const Text('Device Detail')),
         body: Center(
           child: Text(
             error is Failure ? error.message : 'Could not load device.',
@@ -56,56 +58,158 @@ class _DetailScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = colorsForCategory(device.category);
+    final primarySpec = _primarySpec(device);
+
     return Scaffold(
-      appBar: AppBar(title: Text(device.name)),
+      appBar: AppBar(title: const Text('Device Detail')),
+      bottomNavigationBar: const AppBottomNav(),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                foregroundColor: theme.colorScheme.onPrimaryContainer,
-                child: Icon(iconForCategory(device.category), size: 30),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(device.name, style: theme.textTheme.titleLarge),
-                    Text(device.category.label,
-                        style: theme.textTheme.bodyMedium),
-                  ],
+          // Image placeholder (the API provides no images).
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: palette.background,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(iconForCategory(device.category),
+                    size: 52, color: palette.foreground),
+                const SizedBox(height: 8),
+                Text(
+                  'DEVICE IMAGE',
+                  style: TextStyle(
+                    color: palette.foreground,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(device.name, style: theme.textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            _subtitle,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.outline),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Estimated value: ${Formatters.price(device.price)}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Two-cell hero card: a key spec + the deposit.
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _CardCell(
+                      label: primarySpec.label,
+                      value: primarySpec.value,
+                    ),
+                  ),
+                  Expanded(
+                    child: _CardCell(
+                      label: 'Deposit',
+                      value: Formatters.money(device.estimatedDeposit),
+                      valueColor: theme.colorScheme.primary,
+                      alignEnd: true,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 24),
-          _InfoRow(label: 'Category', value: device.category.label),
-          _InfoRow(
-            label: 'Year',
-            value: device.year?.toString() ?? '—',
+          Text('Loan policy', style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(
+            'Maximum loan period is ${AppConstants.maxLoanDays} days. '
+            'The request remains pending until staff approval.',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.outline),
           ),
-          _InfoRow(label: 'Price', value: Formatters.price(device.price)),
-          _InfoRow(
-            label: 'Estimated deposit',
-            value: Formatters.money(device.estimatedDeposit),
-          ),
-          const SizedBox(height: 24),
-          Text('Specifications', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           _Specifications(attributes: device.attributes),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           FilledButton.icon(
             onPressed: () =>
                 context.push(AppRoutes.loan(device.id), extra: device),
             icon: const Icon(Icons.assignment_add),
-            label: const Text('Request Loan'),
+            label: const Text('REQUEST THIS DEVICE'),
           ),
         ],
       ),
+    );
+  }
+
+  String get _subtitle {
+    final year = device.year;
+    return year == null
+        ? '${device.category.label} • Unknown year'
+        : '${device.category.label} • Year $year';
+  }
+
+  /// Picks a representative non-price attribute for the hero card, falling back
+  /// to the category when the device has no extra attributes.
+  ({String label, String value}) _primarySpec(Device device) {
+    for (final entry in device.attributes.entries) {
+      if (!entry.key.toLowerCase().contains('price')) {
+        return (label: _humanise(entry.key), value: '${entry.value ?? '—'}');
+      }
+    }
+    return (label: 'Type', value: device.category.label);
+  }
+}
+
+/// A labelled value cell used inside the hero card.
+class _CardCell extends StatelessWidget {
+  const _CardCell({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.outline)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -118,60 +222,57 @@ class _Specifications extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (attributes.isEmpty) {
-      return Text(
-        'No additional details provided.',
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
-    }
+    final theme = Theme.of(context);
+    if (attributes.isEmpty) return const SizedBox.shrink();
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final entry in attributes.entries)
-          _InfoRow(
-            label: _humanise(entry.key),
-            value: entry.value?.toString() ?? '—',
+        Text('Specifications', style: theme.textTheme.titleMedium
+            ?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              children: [
+                for (final entry in attributes.entries)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 140,
+                          child: Text(
+                            _humanise(entry.key),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(entry.value?.toString() ?? '—',
+                              style: theme.textTheme.bodyLarge),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
+        ),
       ],
     );
   }
-
-  /// Turns keys like `screenSize` / `screen_size` into "Screen Size".
-  String _humanise(String key) {
-    final spaced = key
-        .replaceAllMapped(RegExp('([a-z])([A-Z])'),
-            (m) => '${m[1]} ${m[2]}')
-        .replaceAll('_', ' ')
-        .trim();
-    if (spaced.isEmpty) return key;
-    return spaced[0].toUpperCase() + spaced.substring(1);
-  }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 140,
-            child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            )),
-          ),
-          Expanded(
-            child: Text(value, style: theme.textTheme.bodyLarge),
-          ),
-        ],
-      ),
-    );
-  }
+/// Turns keys like `screenSize` / `screen_size` into "Screen Size".
+String _humanise(String key) {
+  final spaced = key
+      .replaceAllMapped(RegExp('([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}')
+      .replaceAll('_', ' ')
+      .trim();
+  if (spaced.isEmpty) return key;
+  return spaced[0].toUpperCase() + spaced.substring(1);
 }

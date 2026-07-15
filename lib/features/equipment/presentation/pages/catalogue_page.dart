@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/widgets/app_bottom_nav.dart';
 import '../../../../core/error/failures.dart';
 import '../providers/catalogue_provider.dart';
+import '../providers/compare_provider.dart';
 import '../providers/filtered_devices_provider.dart';
 import '../providers/search_provider.dart';
 import '../widgets/catalogue_search_bar.dart';
-import '../widgets/compare_bar.dart';
+import '../widgets/category_filter_chips.dart';
 import '../widgets/device_card.dart';
 import '../widgets/offline_banner.dart';
 import '../widgets/sort_menu.dart';
+import '../widgets/watchlist_sheet.dart';
 
 /// Screen A — the device catalogue.
 ///
 /// Handles all four load states (loading / error / empty / data) via the
 /// catalogue's `AsyncValue`, shows the offline banner when serving cache, and
-/// supports pull-to-refresh. The visible list itself comes from the derived
-/// [filteredDevicesProvider] so search and sort compose cleanly.
+/// supports pull-to-refresh. Category chips + search + sort compose into the
+/// derived [filteredDevicesProvider].
 class CataloguePage extends ConsumerWidget {
   const CataloguePage({super.key});
 
@@ -30,11 +33,16 @@ class CataloguePage extends ConsumerWidget {
         title: const Text('Campus Equipment'),
         actions: const [SortMenu()],
       ),
-      bottomNavigationBar: const CompareBar(),
+      bottomNavigationBar: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [_ViewWatchlistBar(), AppBottomNav()],
+      ),
       body: Column(
         children: [
           const CatalogueSearchBar(),
+          const CategoryFilterChips(),
           if (isFromCache) const OfflineBanner(),
+          const SizedBox(height: 4),
           Expanded(
             child: catalogue.when(
               skipLoadingOnRefresh: true,
@@ -56,6 +64,29 @@ class CataloguePage extends ConsumerWidget {
   }
 }
 
+/// Persistent "VIEW WATCHLIST" bar above the bottom navigation.
+class _ViewWatchlistBar extends ConsumerWidget {
+  const _ViewWatchlistBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(compareProvider).length;
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: () => showWatchlistSheet(context),
+          child: Text(
+            count == 0 ? 'VIEW WATCHLIST' : 'VIEW WATCHLIST ($count)',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The refreshable list of (filtered, sorted) devices, with an empty state.
 class _DeviceList extends ConsumerWidget {
   @override
@@ -67,9 +98,10 @@ class _DeviceList extends ConsumerWidget {
       onRefresh: () => ref.read(catalogueProvider.notifier).refresh(),
       child: devices.isEmpty
           ? _EmptyView(hasQuery: hasQuery)
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               itemCount: devices.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) =>
                   DeviceCard(device: devices[index]),
             ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/router.dart';
+import '../../../../app/widgets/app_bottom_nav.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/loan_result.dart';
 
@@ -9,56 +11,64 @@ import '../../domain/entities/loan_result.dart';
 ///
 /// Built entirely from the [LoanResult] returned by the submit flow (the POST
 /// response is the success criterion). Renders two variants: a created request
-/// (shows server id + createdAt) or an offline pending request (queued for
-/// retry). Either way the borrow/return dates, deposit and pending status show.
+/// (shows the server request id) or an offline pending request (queued for
+/// retry). Either way the device, loan period, deposit and status show.
 class RequestResultPage extends StatelessWidget {
   const RequestResultPage({super.key, required this.result});
 
   final LoanResult result;
+
+  static final DateFormat _dayMonth = DateFormat('d MMM');
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final request = result.request;
     final created = result.isCreated;
+    final period =
+        '${_dayMonth.format(request.borrowDate)} – '
+        '${_dayMonth.format(request.returnDate)}';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Request Result'),
         automaticallyImplyLeading: false,
       ),
+      bottomNavigationBar: const AppBottomNav(),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Center(
-            child: Column(
-              children: [
-                Icon(
-                  created ? Icons.check_circle : Icons.cloud_upload_outlined,
-                  size: 72,
-                  color: created
-                      ? Colors.green
-                      : theme.colorScheme.tertiary,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  created
-                      ? 'Loan request submitted'
-                      : 'Saved offline — pending',
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                if (!created) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'This request will be sent automatically when you are '
-                    'back online.',
-                    style: theme.textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ],
+            child: CircleAvatar(
+              radius: 44,
+              backgroundColor:
+                  theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+              child: Icon(
+                created ? Icons.check : Icons.cloud_upload_outlined,
+                size: 44,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              created ? 'Loan request created' : 'Saved offline — pending',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Center(
+            child: Text(
+              created
+                  ? 'Request ID #${result.id ?? '—'}'
+                  : 'Will be sent automatically when you are back online',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.outline),
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 24),
@@ -67,39 +77,29 @@ class RequestResultPage extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  if (created) ...[
-                    _ResultRow(label: 'Request ID', value: result.id ?? '—'),
-                    _ResultRow(
-                      label: 'Created at',
-                      value: result.createdAt ?? '—',
-                    ),
-                    const Divider(height: 24),
-                  ],
-                  _ResultRow(
-                    label: 'Borrow date',
-                    value: Formatters.date(request.borrowDate),
-                  ),
-                  _ResultRow(
-                    label: 'Return date',
-                    value: Formatters.date(request.returnDate),
-                  ),
+                  _ResultRow(label: 'Device', value: request.deviceName),
+                  const SizedBox(height: 12),
+                  _ResultRow(label: 'Loan period', value: period),
+                  const SizedBox(height: 12),
                   _ResultRow(
                     label: 'Deposit',
                     value: Formatters.money(request.deposit),
                   ),
+                  const SizedBox(height: 12),
                   _ResultRow(
                     label: 'Status',
-                    value: created ? 'pending' : 'pending (offline)',
+                    value:
+                        created ? 'Pending approval' : 'Pending (offline)',
+                    emphasise: true,
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
+          const SizedBox(height: 28),
+          FilledButton(
             onPressed: () => context.go(AppRoutes.catalogue),
-            icon: const Icon(Icons.home),
-            label: const Text('Back to catalogue'),
+            child: const Text('BACK TO DEVICES'),
           ),
         ],
       ),
@@ -108,33 +108,41 @@ class RequestResultPage extends StatelessWidget {
 }
 
 class _ResultRow extends StatelessWidget {
-  const _ResultRow({required this.label, required this.value});
+  const _ResultRow({
+    required this.label,
+    required this.value,
+    this.emphasise = false,
+  });
 
   final String label;
   final String value;
+  final bool emphasise;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.outline),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: emphasise ? theme.colorScheme.primary : null,
             ),
           ),
-          Expanded(
-            child: Text(value, style: theme.textTheme.bodyLarge),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

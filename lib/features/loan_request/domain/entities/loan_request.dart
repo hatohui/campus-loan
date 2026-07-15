@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 class LoanRequest {
   const LoanRequest({
     required this.deviceId,
+    required this.deviceName,
     required this.studentId,
     required this.borrowDate,
     required this.returnDate,
@@ -18,6 +19,9 @@ class LoanRequest {
   });
 
   final String deviceId;
+
+  /// Display-only snapshot of the device name (not sent in the payload).
+  final String deviceName;
   final String studentId;
   final DateTime borrowDate;
   final DateTime returnDate;
