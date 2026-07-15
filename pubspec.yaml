@@ -1,0 +1,47 @@
+name: flutter_application_1
+description: "Campus Equipment Loan - PRM393 Variant D (Clean Architecture + Riverpod)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management (Clean Architecture presentation + composition layer).
+  flutter_riverpod: ^2.6.1
+
+  # Remote data source HTTP client (interceptors, timeouts, typed errors).
+  dio: ^5.7.0
+
+  # Local persistence for offline cache, loan draft and pending requests.
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Declarative routing between the four screens.
+  go_router: ^14.6.2
+
+  # Connectivity check that drives the online/offline decision.
+  connectivity_plus: ^6.1.0
+
+  # Date formatting for the loan period / result screens.
+  intl: ^0.20.2
+
+  # Idempotency key generation for safe offline retry.
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # Fakes/mocks for automated tests (no live network in tests).
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
