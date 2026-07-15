@@ -2,14 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "campus-loan (API key)",
+      "name": "campus-loan (live API + key)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "args": ["--dart-define-from-file=dart_define.json"]
     },
     {
-      "name": "campus-loan (no key, live-limited)",
+      "name": "campus-loan (live API, no key)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart"

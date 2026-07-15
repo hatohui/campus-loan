@@ -11,10 +11,4 @@ class AppConfig {
   static const String apiKey = String.fromEnvironment('API_KEY');
 
   static bool get hasApiKey => apiKey.isNotEmpty;
-
-  /// When true, the app talks to in-memory mock data sources instead of the
-  /// live REST API. Useful for demos when the public API is rate-limited.
-  /// Enable with `--dart-define=MOCK_API=true`. Defaults to the real API.
-  static const bool useMockApi =
-      bool.fromEnvironment('MOCK_API', defaultValue: false);
 }
