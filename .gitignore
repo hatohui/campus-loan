@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets: API key passed via --dart-define-from-file.
+# Keep out of version control and out of the submission ZIP.
+dart_define.json
